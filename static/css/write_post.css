@@ -1,0 +1,128 @@
+html,
+body {
+    
+}
+* {
+    font-family: 'Jua', sans-serif;
+}
+.container {
+    max-width: 100%;
+    min-height: 800px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: center;
+}
+
+
+.Write {
+    
+    float: left;
+    width: 50%;
+    min-height: 500px;
+    margin-top: 20px;
+    background-color : rgb(233, 233, 233);
+}
+
+.WriteT {
+    width: 100%;
+    height: 94px;
+
+    border: 0 solid rgb(233, 233, 233);
+    font-size: 35px;
+    padding: 15px;
+
+    overflow: hidden;
+    resize: none;
+}
+
+.WriteT:focus {
+    outline: none;
+}
+
+.WriteC {
+    width: 100%;
+    height: 100%;
+
+    border: 0 solid black;
+    padding: 20px;
+    font-size: 18px;
+
+}
+
+.WriteC:focus {
+    outline: none;
+}
+
+.WriteBtn {
+    text-align:center;
+}
+
+.WB1 {
+    background-color: #ffffff00;
+
+    outline: 0;
+    border: 0;
+
+    float: left;
+    margin: 25px;
+
+    font-size: 20px;
+}
+
+.WB2 {
+    background-color: green;
+    color: white;
+
+    outline: none;
+    border: 0;
+    border-radius: 10px;
+
+    margin: 25px;
+
+    font-size: 20px;
+}
+
+.WB3 {
+    background-color: green;
+    color: white;
+
+    outline: none;
+    border: 0;
+    border-radius: 10px;
+
+    float: right;
+    margin: 25px;
+
+    font-size: 20px;
+}
+
+
+.Preview {
+    float: right;
+    width: 50%;
+    min-height: 800px;
+    background-color: lightblue;
+}
+
+.PreviewT {
+    width: 100%;
+    height: auto;
+
+    border: 0 solid rgb(255, 255, 255);
+    font-size: 35px;
+    padding: 15px;
+
+    overflow: hidden;
+    resize: none;
+}
+
+.PreviewC {
+    border: 0 solid black;
+    width: 100%;
+    min-height: 910px;
+    padding: 15px;
+
+    font-size: 18px;
+    overflow: auto;
+
+}

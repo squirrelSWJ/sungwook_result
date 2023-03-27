@@ -1,0 +1,231 @@
+{% extends "layout.html" %}
+{% block title %}메인페이지{% endblock %}
+{% block head %}
+    {{ super() }}
+    <link rel="stylesheet" href="../static/css/board_main.css" />
+    <noscript><link rel="stylesheet" href="../static/css/board_noscript.css" /></noscript>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@500&display=swap" rel="stylesheet">
+
+<style>
+    #before-post {
+        font-size: 20px;
+        display: none;
+    }
+    #next-post {
+        font-size: 20px;
+        display: none;
+    }
+    .delete-board {
+        width: max-content;
+        margin: auto;
+        margin-top: 20px;
+        display: none;
+    }
+</style>
+<script>
+    $(document).ready(function () {
+        show_content()
+        get_next_and_before_post();
+        check_writer();
+    });
+
+    const show_content = () => {
+        const before_content = `{{detailDict['detail']['bd_content']}}`
+        const after_content = before_content.replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+        $("#post-content").append(after_content); // innerHTML
+
+        // 블로그 주소가 등록 되어 있냐 없냐.
+        const user_site = `{{detailDict['detail']['user_site']}}`
+        if (user_site != "None") {
+            $('#blog').attr("style", "display:block;")
+            if (user_site.includes("http://") === false) {
+                $("#blog-link").attr("href", "http://" + user_site)
+            }
+        }
+
+        // 소개글이 있냐 없냐
+        const user_fp = `{{detailDict['detail']['user_fp']}}`
+        if (user_fp != "None") {
+            $("#user-fp").attr("style", "display:block;")
+        } else {
+
+        }
+
+        const before_imgObj = `{{detailDict['images']}}`    // [{}, {}]
+        if (before_imgObj[0] === "[") {
+            const after_imgObj = eval(before_imgObj.replace(/&#39;/g, "'")) // 특수문자들을 원래의 문자로 되돌린 후 문자열을 코드로 인식하게 바꿔줌.
+
+            const all_img = document.querySelectorAll("#post-content img");
+
+            for (let i = 0; i < after_imgObj.length; i++) {
+                const img_obj = after_imgObj[i]
+                const path = `../static/posting_images/${img_obj["user_nk"]}/board_${img_obj["board_id"]}/${img_obj["image"]}`
+                all_img[`${i}`].src = path;
+                all_img[`${i}`].style.maxWidth = "100%";
+            }
+        } else {
+            return
+        }
+    }
+
+    // 이전 글과 다음 글을 가져올거야.
+    const get_next_and_before_post = () => {
+        const now_user_nk = '{{detailDict["detail"]["user_nk"]}}'
+        const now_post_id = '{{detailDict["detail"]["id"]}}'
+
+        $.ajax({
+            type: "POST",
+            url: "/boards/pages",
+            data: { user_nk_give: now_user_nk, post_id_give: now_post_id },
+            success: function (response) {
+                const before = response["result"]["before"]
+                const after = response["result"]["after"]
+
+                const before_after_div = document.querySelector("#before-after")
+                const before_div = document.querySelector("#before-post")
+                const after_div = document.querySelector("#next-post")
+
+                if (before[0] != null || before[0] != undefined) {
+                    before_div.style.display = "block";
+                    before_div.addEventListener('click', () => { location.href=`/boards/${before[0]["id"]}` })
+                    if (before[0]["bd_title"].length > 12) {
+                        before[0]["bd_title"] = before[0]["bd_title"].substring(0, 10) + '...'
+                    }
+                    before_div.querySelector("span").innerText = '< ' + before[0]["bd_title"] + ' >';
+                } else {
+                    before_div.style.display = "none"
+                    before_after_div.style.gridTemplateColumns = "40%"
+                }
+
+                if (after[0] != null || after[0] != undefined) {
+                    after_div.style.display = "block";
+                    after_div.addEventListener('click', () => { location.href=`/boards/${after[0]["id"]}` })
+                    if (after[0]["bd_title"].length > 12) {
+                        after[0]["bd_title"] = after[0]["bd_title"].substring(0, 10) + '...'
+                    }
+                    after_div.querySelector("span").innerText = '< ' + after[0]["bd_title"] + ' >';
+                } else {
+                    after_div.style.display = "none"
+                    before_after_div.style.gridTemplateColumns = "40%"
+                }
+
+
+            }
+        });
+    }
+
+    // 로그인 당사자만 삭제, 수정 버튼을 볼 수 있음.
+    const check_writer = () => {
+        const user_nk_session = "{{session['user_nk']}}"
+        const user_nk_board = "{{detailDict['detail']['user_nk']}}"
+        if (user_nk_board === user_nk_session) {
+            $(".delete-board").attr("style", "display:block")
+            const liner = document.querySelector("#liner")
+            liner.style.borderTop = "1px solid gray";
+        }
+    }
+
+    // 삭제 버튼 클릭 시 해당 게시글을 삭제
+    const delete_board = () => {
+        const check = confirm("해당 게시글을 삭제 하시겠습니까?");
+
+        if (check) {
+            const board_id = "{{detailDict['detail']['id']}}"
+            $.ajax({
+                type: "DELETE",
+                url: "/boards",
+                data: {board_id_give: board_id },
+                success: function (response) {
+                    if (response["msg"] === 1) {
+                        alert("삭제 완료")
+                        location.href="/";
+                    }
+                }
+            });
+        }
+    }
+
+    // 수정 하기 버튼 클릭 시
+    const update_board = () => {
+        const user_nk_session = "{{session['user_nk']}}"
+        const user_nk_board = "{{detailDict['detail']['user_nk']}}"
+        const board_id = "{{detailDict['detail']['id']}}"
+
+        if (user_nk_board === user_nk_session) {
+            const check = confirm("글을 수정 하시겠습니까?")  // 확인
+                // true
+            if (check) {
+                location.href=`/write/${board_id}`
+            } else {
+                console.log("수정 취소!")
+            }
+        }
+    }
+
+</script>
+{% endblock %}
+{% block content %}
+<div class="is-preload" >
+<!-- Wrapper -->
+    <div id="wrapper" style="margin-bottom: 100px;">
+
+        <!-- Header -->
+        <header id="header" class="alt">
+            {% if detailDict['detail']['user_img'] == None %}
+            <div class="logo"><img src="../static/board_images/basic_img/default_profile.png" alt="" /></div>
+            {% else %}
+            <div class="logo"><img src="{{detailDict["detail"]['user_img'] }}" alt="" /></div>
+            {% endif %}
+            <div id="blog-wrap"><div id="blog"><a id="blog-link">{{detailDict['detail']['user_site']}}</a></div></div>
+            <div id="email-wrap"><div id="email">{{detailDict["detail"]["user_email"]}}</div></div>
+            <div id="user-fp-wrap"><div id="user-fp">{{detailDict["detail"]["user_fp"]}}</div></div>
+        </header>
+
+        <!-- Main -->
+        <div id="main" style="padding-top: 150px;">
+            <!-- Content -->
+            <section id="content" class="main" style="min-height: 700px; margin-bottom: 100px; padding-bottom:100px; background-color: lightcyan">
+                <p id="main-title">{{detailDict["detail"]["bd_title"]}}</p>
+                <p id="writer">{{detailDict["detail"]["user_nk"]}}</p>
+                <p id="post-content" style="color: black;"></p>
+            </section>
+
+            <!-- 이전 글, 다음 글 -->
+            <section id="before-after-wrap">
+                <div id="before-after">
+                    <div id="before-post" style="font-family: 'IBM Plex Sans KR', sans-serif; font-size: 30px;"><span style="font-size: 30px;"></span> ⇦</div>
+                    <div id="next-post" style="font-family: 'IBM Plex Sans KR', sans-serif; font-size: 30px;">⇨ <span style="font-size: 30px;"></span></div>
+                </div>
+            </section>
+
+            <!-- 삭제, 수정 버튼 -->
+            <section class="main" id="liner" style="border-top: 0px">
+                <div class="delete-board">
+                    <button type="button" class="btn btn-success" style="background-color: dodgerblue;
+                        border:0px;" onclick="update_board()"><span style="color: white">게시글 수정 하기</span></button>
+                    <button type="button" class="btn btn-danger" style="background-color: #dc3545;
+                        border:0px;" onclick="delete_board()"><span style="color: white">게시글 삭제 하기</span></button>
+                </div>
+            </section>
+
+        </div>
+
+    </div>
+
+
+    <!--  간격 띄우기 용 -->
+    <div style="width: 100%; height:100px;"></div>
+
+
+    <script src="../static/js/board_jquery.min.js"></script>
+    <script src="../static/js/board_jquery.scrollex.min.js"></script>
+    <script src="../static/js/board_jquery.scrolly.min.js"></script>
+    <script src="../static/js/board_browser.min.js"></script>
+    <script src="../static/js/board_breakpoints.min.js"></script>
+    <script src="../static/js/board_util.js"></script>
+    <script src="../static/js/board_main.js"></script>
+</div>
+</div>
+{% endblock %}

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="result3">새 글 작성</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi" crossorigin="anonymous">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-OERcA2EqjJCMA+/3y+gxIOqMEjwtxJY7qPCqsdltbNJuaOe923+mo//f6V8Qbsw3"
+            crossorigin="anonymous"></script>
+
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+
+    <link href="../static/css/write_post.css" rel="stylesheet">
+
+    <style>
+        .mypost {
+            width: 1000px;
+        }
+        .form-floating {
+            width: 1000px;
+        }
+        #title_up {
+            width: 1000px;
+        }
+        #editor {
+            margin-top: 20px;
+            border: 1px solid black;
+            width: 1000px;
+            min-height: 500px;
+            padding-bottom: 100px;
+        }
+        #img-selector {
+            display: none;
+        }
+        #editor img {
+            max-width: 95%;
+            display: block;
+            margin: auto;
+        }
+        #result2 img {
+            max-width: 95%;
+            display: block;
+            margin: auto;
+        }
+    </style>
+
+    <script>
+        // 페이지를 띄운 곳이 "새 글 작성" 인지, "수정하기" 인지를 판단.
+        $(document).ready(function () {
+            check_status();
+
+            // 이미지 업로드 관련
+            const btnImage = document.getElementById('btn-image');
+            const imageSelector = document.getElementById('img-selector');
+            btnImage.addEventListener('click', function () {
+                imageSelector.click();
+            });
+            imageSelector.addEventListener('change', function (event) {
+                let files = event.target.files;
+                /* 기존의 코드.
+                if (!!files) {
+                    insertImageDate(files[0]);
+                }
+                 */
+                if (files.length) {
+                    insertImageDate(files[0]);
+                } else {
+                    return
+                }
+            });
+            async function insertImageDate(file){
+                const targetDiv = document.querySelector("#editor");
+                let img = document.createElement("img");
+                // imageSelector.files = null;
+
+                const reader = new FileReader();
+
+                targetDiv.append(img)
+                reader.addEventListener('load', function (e) {
+                    img.src = reader.result;
+                });
+                reader.readAsDataURL(file);
+            }
+        });
+
+
+        const check_status = () => {
+            const receive_var = `{{status}}`
+            console.log("아니 이게? : " + typeof receive_var)
+            if (receive_var === "0") {
+                return;
+            } else if (receive_var === "1") {
+                const check_btn = document.querySelector("#insert-or-update")
+                check_btn.innerHTML = "수정하기"
+                const before_content = `{{detailDict['detail']['bd_content']}}`
+                const after_content = before_content.replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+                $("#editor").append(after_content); // innerHTML
+                $("#result2").append(after_content)
+
+                const bd_title = `{{detailDict['detail']['bd_title']}}`
+                $("#bd_title").append(bd_title)
+                $("#result").append(bd_title)
+
+                const before_imgObj = `{{detailDict['images']}}`    // [{}, {}]
+                if (before_imgObj[0] === "[") {
+                    const after_imgObj = eval(before_imgObj.replace(/&#39;/g, "'")) // 특수문자들을 원래의 문자로 되돌린 후 문자열을 코드로 인식하게 바꿔줌.
+
+                    const all_img = document.querySelectorAll("#editor img");
+                    const mirror = document.querySelectorAll("#result2 img");
+
+                    for (let i = 0; i < after_imgObj.length; i++) {
+                        const img_obj = after_imgObj[i]
+                        const path = `../static/posting_images/${img_obj["user_nk"]}/board_${img_obj["board_id"]}/${img_obj["image"]}`
+                        console.log('path : ' + path)
+                        all_img[`${i}`].src = path;
+                        all_img[`${i}`].style.maxWidth = "95%";
+                        all_img[`${i}`].style.display = "block";
+                        all_img[`${i}`].style.margin = "auto";
+                        mirror[`${i}`].src = path;
+                        mirror[`${i}`].style.maxWidth = "95%";
+                        mirror[`${i}`].style.display = "block";
+                        mirror[`${i}`].style.margin = "auto";
+                    }
+                } else {
+                    return
+                }
+
+            }
+        }
+
+        function bdScroll(obj) {
+            obj.style.height = '2px';
+            obj.style.height = (12 + obj.scrollHeight) + 'px';
+            obj.style.maxHeight = '1050px';
+        }
+
+        // 여기서부터는 이미지 업로드 관련.
+        function print_bd_t() {
+            const bd_title = document.getElementById('bd_title').value;
+            document.getElementById("result").innerText = bd_title;
+            document.getElementById("result3").innerText = "(작성중) " + bd_title
+        }
+
+        function print_bd_c() {
+            const editor = document.getElementById('editor').innerHTML;
+            document.getElementById("result2").innerHTML = editor
+        }
+
+        // DB로 포스트를 insert 혹은 update
+        const posting = async () => {
+            const check_status = "{{status}}"
+            const user_id = "{{session['user_id']}}"
+            const user_nk = "{{session['user_nk']}}"
+            const board_id = `{{detailDict['detail']['id']}}`
+            const title = document.getElementById("bd_title").value;
+            const content = document.getElementById("editor").innerHTML
+
+
+            if (title === '') {
+                alert("제목을 적어 주세요")
+                return
+            }
+            if (content === '') {
+                alert("내용을 적어 주세요")
+                return
+            }
+
+            // const imgreg = /(<img[^>]+src\s*=\s*[\"']?([^>\"']+)[\"']?[^>]*>)/g    // img 태그까지 통째로 빼는 경우, src만 빼는 경우 $ 2개.
+            const imgreg2 = /src=[\""\']([^\""\']+")/g
+            const without_img_src = content.replace(imgreg2, '')         // <img >  즉 src="" 만 제외하고 반환.
+            console.log(without_img_src)
+
+            const src_reg = new RegExp(/src=[\""\']([^\""\']+")/, "g")
+            const only_src = content.match(src_reg);        // src="data~~" 가 차례대로 담긴 배열임.
+
+            let formData = new FormData();  // ajax 로 보낼 form data
+
+            if (only_src != null || only_src != undefined) {
+                for (let i = 0; i < only_src.length; i++) {
+                    let randomName = Math.random().toString(36).substring(2, 12);   // 랜덤 이름 생성.
+                    const imaDataUrl = only_src[i].slice(5, -1)     // 앞의 src=" 와 맨 뒤의 " 를 떼어낸, 순수 data url 의 문자열
+
+                    const blob = await fetch(imaDataUrl).then(imgFile => imgFile.blob());
+                    const file = await new File([blob], randomName + ".jpg", {type:"image/jpeg"})
+                    formData.append(`img_${i}`, file)
+                }
+            }
+
+            const doc = JSON.stringify({
+                user_id: user_id,
+                user_nk: user_nk,
+                post_title: title,
+                board_id: board_id,
+                post_content: without_img_src
+            });
+
+            formData.append('user_info', doc)      // 이제 formData 에는 키-값 형태로 이미지들과 doc 이라는 JSON 형태의 유저 정보가 담겨 있어.
+
+            let re_api = '';
+            if (check_status === "0" ) { re_api = '/post_save' }
+            if (check_status === "1") { re_api = '/post_up' }
+
+            $.ajax({
+                type: "POST",
+                enctype: 'multipart/form-data',
+                url: re_api,
+                data: formData,
+                processData: false,       // 기본 값은 true. false 면 데이터를 query string 으로 설정 하지 않아. 즉 file 을 보내려면 false 로.
+                contentType: false,       // 이게 true 로 되어 있으면 데이터를 string 으로 바꾼 다고.
+                success: function (response) {
+                    if (response["msg"] === 1) {
+                        alert("포스팅 성공!!!");
+                        location.href="/";
+                    } else if (response['msg'] === 2) {
+                        alert("수정 완료!");
+                        const board_id = response["result"]
+                        location.href=`/boards/${board_id}`
+                    }
+                }
+            });
+        }
+
+
+
+    </script>
+
+</head>
+<!--  class="WriteC" id="bd_content"  -->
+<body>
+<div class="container">
+    <div class="Write">
+        <div><textarea class="WriteT" id="bd_title" onkeyup="print_bd_t()" onkeydown="bdScroll(this)" type="text"
+                       placeholder="제목을 입력하세요" maxlength="50"></textarea>
+        </div>
+        <div>
+            <div contenteditable="true" id="editor" onkeyup="print_bd_c()"
+                 style="min-height: 750px; max-width: 98%; height:max-content; border:none; outline: none; background-color: #b6d4fe">
+
+            </div>
+        </div>
+        <div class="WriteBtn">
+            <button class="WB2" onclick="posting()" id="insert-or-update">출간하기</button>
+            <input id="img-selector" type="file" accept="image/*">
+            <button class="WB2" id="btn-image" style="width: 90px; background-color: #0c63e4">이미지</button>
+            <div></div>
+        </div>
+    </div>
+    <div class="Preview">
+        <div id="result" class="PreviewT" placeholder="미리보기 제목" maxlength="50">
+        </div>
+        <div id="result2" class="PreviewC" placeholder="미리보기 이야기" maxlength="3000">
+        </div>
+    </div>
+</div>
+
+</body>
+
+</html>
